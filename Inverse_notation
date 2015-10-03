@@ -1,0 +1,259 @@
+//----------------------------------------------------------------------
+
+
+#include <iostream>
+#include <string>
+#include <stack>
+#include <math.h>
+#include <fstream>
+using namespace std;
+
+#define NO_ERROR 0
+#define BRACKETS_ERROR 1
+#define OPERATION_ERROR 2
+#define INCORRECT_INPUT 3
+
+
+double calculate(string);
+void trim (string&);			 
+bool isOperation (char);
+int priorit(char);
+int check(string);			   //check, valuetion
+string convert (string);		   //converting, built
+
+int main ()
+{
+	string line;
+
+	//cout << "Enter the expression. Use the brackets. (NU{0}, +,-,*,/)"<<endl;
+	// getline(cin, line);
+
+	ifstream file;
+	file.open("expression.txt");
+	while (!file.eof())
+	{
+		getline(file, line);
+		//file.close();
+		cout << line << endl;
+		trim(line);
+		int revisionValue = check(line);
+		switch (revisionValue)
+		{
+			case NO_ERROR:
+			{
+				string output = convert(line);
+				for(unsigned i = 0; i < output.size(); i++) 
+					if(output[i] != '?') 
+						cout<<output[i];
+					else cout << " ";
+				cout << endl;
+				cout << "The result is: " << calculate(output) << endl;
+			}
+			break;
+
+			case BRACKETS_ERROR:
+				{
+					cout<<"Incorrect brackets position.\n";
+				}
+			break;
+			case OPERATION_ERROR:
+				{
+					cout<<"Incorrect operation's position.\n";
+				}
+			break;
+			case INCORRECT_INPUT:
+				{
+					cout<<"Incorrect input.\n";
+				}
+			break;
+		}
+		line = "";
+		cout<<"\n--------------------------------------------------------------\n\n";
+	}
+	file.close();
+    system("pause");
+} 
+//
+//-------------------------------------------
+//
+double calculate (string output)
+{
+	int size = output.size();
+	stack <double> st;
+	double a, b, res;
+	for(int i = 0; i < size; i++)
+	{
+		switch(output[i])
+		{
+			case'+': 
+			{
+				a = st.top(); st.pop();
+				b = st.top(); st.pop();
+				res = a + b;
+				st.push(res); 
+				break;
+			}
+			case'-': 
+			{
+				a = st.top(); st.pop();
+				b = st.top(); st.pop();
+				res = b - a;
+				st.push(res); 
+				break;
+			}
+			case'*': 
+			{
+				a = st.top(); st.pop();
+				b = st.top(); st.pop();
+				res = a * b;
+				st.push(res); 
+				break;
+			}
+			case'/': 
+			{   
+				a = st.top(); st.pop();
+				b = st.top(); st.pop();
+				res = b / a;
+				st.push(res); 
+				break;
+			}
+	
+			default: 
+				if(priorit(output[i]) == 0) 
+				 {
+					int j = i + 1;
+					while((output[j] != '?')) j++;
+					int res = stoi(output.substr(i,j));
+					st.push(res);
+					i = j;
+				 }
+		}
+	}
+	return st.top();
+
+}
+//
+//-------------------------------------------
+//
+void trim(string& input)
+{
+	string res;
+	int s = input.length();
+	for(int i = 0; i < s; i++)
+	{
+		if((input[i] == '-' || input[i] == '+') && (!i || input[i - 1] == '(')) 
+		{
+			res += '0';
+		}
+		if(!(input[i] == ' ' || input[i] == '/r')) res += input[i];
+	}
+	while(isOperation(res[res.length()])) res = res.substr(0, res.length());
+	input = res;
+}
+//
+//-------------------------------------------
+//
+bool isOperation (char z)
+{
+	switch(z)
+	{
+		case'+': return true;
+		case'-': return true;
+		case'*': return true;
+		case'/': return true;
+		case'=': return true;
+		default: return false;
+	}
+}
+//
+//-------------------------------------------
+//
+int priorit(char z )
+{
+		if(z >= '0' && z <= '9') return 0; //if number - priorit = 0
+		switch(z)
+		{
+			case'*':return 3; break;
+			case'/':return 3; break;
+			case'+':return 2; break;
+			case'-':return 2; break;
+			case'(':return 1; break;
+			case')':return -1; break;
+			
+			default:return -2;
+		}
+}
+//
+//-------------------------------------------
+//
+int check (string input)
+{
+	int bracketCounter = 0;
+	int s = input.length();
+	for(int i = 0; i < s; i++)
+	{
+		switch(input[i])
+		{
+			case'(': bracketCounter++;
+			break;
+			case')':
+			{
+				bracketCounter--;
+				if(bracketCounter < 0) return BRACKETS_ERROR;
+			}
+				break;
+	
+		}
+		if(i > 0 && isOperation(input[i]) && isOperation(input[i - 1])) return OPERATION_ERROR;
+		if((input[i] <= '9' && input[i] >= '0') || isOperation(input[i]) ) continue;
+		if(input[i] == '(' || input[i] == ')') continue;
+		else return INCORRECT_INPUT;
+	}
+	if(bracketCounter) return BRACKETS_ERROR;
+	else return NO_ERROR;
+}
+//
+//-------------------------------------------
+//
+string convert (string input)
+{
+	stack <char> stack;
+	string output;
+	int size = input.length();
+	for(int i = 0; i < size; i++)
+	{
+		int p = priorit(input[i]);
+		if(p == 0) 
+		{
+			output += (input[i]);
+			if(priorit(input[i + 1])) output += ('?');
+		}
+		if(p == 1) stack.push(input[i]);
+		if(p == 2 || p == 3) 
+		{
+			while(!stack.empty() && (p <= priorit(stack.top())))
+			{
+				output += stack.top();
+				stack.pop();
+			}
+			stack.push(input[i]);
+		}
+		if(p == -1) 
+		{ 
+			while(stack.top() != '(')
+			{
+				output += stack.top();
+				stack.pop();
+			}
+			stack.pop(); 
+		}
+
+	}
+	
+	while(!stack.empty())
+	{   
+		output += stack.top();
+		stack.pop();
+	}
+	return output;
+}
